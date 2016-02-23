@@ -55,7 +55,7 @@ public class RenderFairy extends RenderLiving
         float f1 = 0.875F;
         fairyModel.sinage = fairy.sinage;
         fairyModel.flymode = fairy.flymode();
-        fairyModel.showCrown = fairy.tamed() || fairy.queen();
+        fairyModel.showCrown = fairy.isTamed() || fairy.queen();
         fairyModel.isSneak = fairy.isSneaking();
         fairyModel.scoutWings = fairy.scout();
         fairyModel.rogueParts = fairy.rogue();
@@ -154,7 +154,7 @@ public class RenderFairy extends RenderLiving
             setRenderPassModel(fairyModel4);
             fairyModel4.sinage = fairy.sinage;
             fairyModel4.flymode = fairy.flymode();
-            fairyModel4.showCrown = fairy.tamed() || fairy.queen();
+            fairyModel4.showCrown = fairy.isTamed() || fairy.queen();
             fairyModel4.isSneak = fairy.isSneaking();
             fairyModel4.scoutWings = fairy.scout();
             fairyModel4.onGround = fairyModel.onGround;

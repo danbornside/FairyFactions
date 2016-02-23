@@ -4,6 +4,8 @@ import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
 
+import net.minecraft.entity.ai.*;
+import net.minecraft.entity.passive.*;
 import org.apache.logging.log4j.Logger;
 
 import cpw.mods.fml.relauncher.ReflectionHelper;
@@ -29,13 +31,6 @@ import net.minecraft.entity.ai.attributes.IAttributeInstance;
 import net.minecraft.entity.item.EntityMinecart;
 import net.minecraft.entity.item.EntityTNTPrimed;
 import net.minecraft.entity.monster.EntityCreeper;
-import net.minecraft.entity.passive.EntityAnimal;
-import net.minecraft.entity.passive.EntityChicken;
-import net.minecraft.entity.passive.EntityCow;
-import net.minecraft.entity.passive.EntityMooshroom;
-import net.minecraft.entity.passive.EntityPig;
-import net.minecraft.entity.passive.EntitySheep;
-import net.minecraft.entity.passive.EntityWolf;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.entity.projectile.EntityPotion;
@@ -63,7 +58,7 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.EmptyChunk;
 
 
-public class EntityFairy extends EntityAnimal {
+public class EntityFairy extends EntityTameable {
 	
 	private static final Logger LOG = FairyFactions.LOGGER;
 
@@ -101,6 +96,22 @@ public class EntityFairy extends EntityAnimal {
 		super(world);
 		this.setSize(0.6F, 0.85F);
 
+		this.getNavigator().setAvoidsWater(true);
+		this.tasks.addTask(1, new EntityAISwimming(this));
+		this.tasks.addTask(2, this.aiSit);
+		// this.tasks.addTask(3, new EntityAILeapAtTarget(this, 0.4F));
+		this.tasks.addTask(4, new EntityAIAttackOnCollide(this, 1.0D, true));
+		this.tasks.addTask(5, new EntityAIFollowOwner(this, 1.0D, 10.0F, 2.0F));
+		//this.tasks.addTask(6, new EntityAIMate(this, 1.0D));
+		this.tasks.addTask(7, new EntityAIWander(this, 1.0D));
+		//this.tasks.addTask(8, new EntityAIBeg(this, 8.0F));
+		this.tasks.addTask(9, new EntityAIWatchClosest(this, EntityPlayer.class, 8.0F));
+		this.tasks.addTask(9, new EntityAILookIdle(this));
+		this.targetTasks.addTask(1, new EntityAIOwnerHurtByTarget(this));
+		this.targetTasks.addTask(2, new EntityAIOwnerHurtTarget(this));
+		this.targetTasks.addTask(3, new EntityAIHurtByTarget(this, true));
+		// this.targetTasks.addTask(4, new EntityAITargetNonTamed(this, EntitySheep.class, 200, false));
+
 		// fairy-specific init
 		setSkin(rand.nextInt(4));
 		setFaction(0);
@@ -116,8 +127,6 @@ public class EntityFairy extends EntityAnimal {
 	}
 
 	// DataWatcher object indices
-	protected final static int	B_FLAGS		= 17;
-	protected final static int	B_TYPE		= 18;	// skin, job, faction
 	protected final static int	B_NAME_ORIG	= 19;	// generated original name
 	protected final static int	S_OWNER		= 20;	// owner name
 	protected final static int	B_FLAGS2	= 21;	// capabilities, activities,
@@ -125,6 +134,9 @@ public class EntityFairy extends EntityAnimal {
 	protected final static int	B_HEALTH	= 22;	// NB: UNUSED currently - was used in original mod
 	protected final static int	S_NAME_REAL	= 23;	// custom name
 	protected final static int	I_TOOL		= 24;	// temporary tool
+
+	protected final static int	B_FLAGS		= 25;
+	protected final static int	B_TYPE		= 26;	// skin, job, faction
 
 	@Override
 	protected void entityInit() {
@@ -138,6 +150,9 @@ public class EntityFairy extends EntityAnimal {
 		dataWatcher.addObject(S_NAME_REAL, "");
 		dataWatcher.addObject(I_TOOL, new Integer(0));
 	}
+
+	@Override
+	protected boolean isAIEnabled() {return true;}
 	
 	private void _dump_() {
 		StringBuilder sb = new StringBuilder();
@@ -354,7 +369,7 @@ public class EntityFairy extends EntityAnimal {
 
 			if (hearts() != didHearts) {
 				didHearts = !didHearts;
-				showHeartsOrSmokeFX(tamed());
+				showHeartsOrSmokeFX(isTamed());
 			}
 
 			++particleCount;
@@ -393,7 +408,7 @@ public class EntityFairy extends EntityAnimal {
 					 */
 				}
 
-				if (nameEnabled() && tamed() && hasRuler()) {
+				if (nameEnabled() && isTamed() && hasRuler()) {
 					// TODO: proxy display rename gui
 				}
 			}
@@ -496,7 +511,7 @@ public class EntityFairy extends EntityAnimal {
 
 	@Override
 	public boolean canDespawn() {
-		return ruler == null && !tamed();
+		return ruler == null && !isTamed();
 	}
 	
 	@Override
@@ -558,8 +573,8 @@ public class EntityFairy extends EntityAnimal {
 	public static final float	PATH_AWAY			= (float) Math.PI;
 
 	@Override
-	public void updateEntityActionState() {
-		super.updateEntityActionState();
+	public void updateAITasks() {
+		super.updateAITasks();
 		
 		// _dump_();
 
@@ -597,7 +612,7 @@ public class EntityFairy extends EntityAnimal {
 						attackEntity(ridingEntity, 0F);
 						liftFlag = false;
 					}
-				} else if (tamed()) {
+				} else if (isTamed()) {
 					if (ridingEntity.onGround || ridingEntity.isInWater()) {
 						setFlyTime(( queen() || scout() ? 60 : 40 ));
 
@@ -830,7 +845,7 @@ public class EntityFairy extends EntityAnimal {
 					&& !canEntityBeSeen(entityToAttack) )) {
 				++loseInterest;
 
-				if (loseInterest >= ( tamed() ? FairyConfig.BEHAVIOR_AGGRO_TIMER
+				if (loseInterest >= ( isTamed() ? FairyConfig.BEHAVIOR_AGGRO_TIMER
 						: FairyConfig.BEHAVIOR_AGGRO_TIMER * 3 )) {
 					setTarget(null);
 					loseInterest = 0;
@@ -894,7 +909,7 @@ public class EntityFairy extends EntityAnimal {
 
 		if (ruler == null) {
 			// Looking for a queen to follow.
-			if (!tamed() && !queen()) {
+			if (!isTamed() && !queen()) {
 				double d = 40D;
 
 				if (getFaction() == 0) {
@@ -925,7 +940,7 @@ public class EntityFairy extends EntityAnimal {
 						}
 					}
 				}
-			} else if (getFaction() == 0 && tamed()) {
+			} else if (getFaction() == 0 && isTamed()) {
 				// Looking for a player to follow.
 				List list = worldObj.getEntitiesWithinAABB(EntityPlayer.class,
 						boundingBox.expand(16D, 16D, 16D));
@@ -1487,11 +1502,11 @@ public class EntityFairy extends EntityAnimal {
 	// The AI method which handles post-related activities.
 	private void handlePosted(boolean flag) {
 		/*
-		if( tamed() ) {
+		if( isTamed() ) {
 			System.out.println("handlePosted("+flag+") - "+postedCount+" - "+this);
 		}
 		*/
-		if (!tamed() || getFaction() > 0 /*|| postedCount <= ( posted() ? 2 : 5 ) */ ) {
+		if (!isTamed() || getFaction() > 0 /*|| postedCount <= ( posted() ? 2 : 5 ) */ ) {
 			++postedCount;
 			return; // Avoid processing too often or when not necessary.
 		}
@@ -1503,7 +1518,7 @@ public class EntityFairy extends EntityAnimal {
 			if (ridingEntity != null && ruler != null
 					&& ridingEntity == ruler) {
 				abandonPost();
-				return; // When a the player takes a tamed fairy away, it
+				return; // When a the player takes a isTamed fairy away, it
 						// automatically cancels the post.
 			}
 
@@ -1732,13 +1747,13 @@ public class EntityFairy extends EntityAnimal {
 		setFairyFlag(FLAG_CAN_FLAP, flag);
 	}
 
-	public boolean tamed() {
-		return getFairyFlag(FLAG_TAMED);
-	}
+//	public boolean tamed() {
+//		return getFairyFlag(FLAG_TAMED);
+//	}
 
-	protected void setTamed(boolean flag) {
-		setFairyFlag(FLAG_TAMED, flag);
-	}
+//	protected void setTamed(boolean flag) {
+//		setFairyFlag(FLAG_TAMED, flag);
+//	}
 
 	public boolean angry() {
 		return getFairyFlag(FLAG_ANGRY);
@@ -1930,7 +1945,7 @@ public class EntityFairy extends EntityAnimal {
 			} else {
 				return getFactionName(getFaction());
 			}
-		} else if (tamed()) {
+		} else if (isTamed()) {
 			String woosh = getActualName(getNamePrefix(), getNameSuffix());
 
 			if (queen()) {
@@ -2049,7 +2064,7 @@ public class EntityFairy extends EntityAnimal {
 	public boolean isRuler(EntityPlayer player) {
 		if (player == null)
 			return false;
-		return tamed() && rulerName().equals(player.getGameProfile().getName());
+		return isTamed() && rulerName().equals(player.getGameProfile().getName());
 	}
 
 	public boolean hasRuler() {
@@ -2246,7 +2261,7 @@ public class EntityFairy extends EntityAnimal {
 							&& rand.nextFloat() * 5F < ( f - 0.4F ) * 2.0F) {
 						setWithered(false);
 
-						if (tamed()) {
+						if (isTamed()) {
 							setHearts(!didHearts);
 						}
 
@@ -2322,8 +2337,8 @@ public class EntityFairy extends EntityAnimal {
 
 	// Checks to see if a fairy is their comrade.
 	private boolean sameTeam(EntityFairy fairy) {
-		if (tamed()) {
-			return fairy.tamed() && fairy.getFaction() == 0
+		if (isTamed()) {
+			return fairy.isTamed() && fairy.getFaction() == 0
 					&& fairy.rulerName().equals(this.rulerName());
 		} else if (getFaction() > 0) {
 			return fairy.getFaction() == this.getFaction();
@@ -2439,7 +2454,7 @@ public class EntityFairy extends EntityAnimal {
 			} else {
 				if (( getFaction() == 0
 						|| worldObj.difficultySetting == EnumDifficulty.PEACEFUL )
-						&& !( ( queen() || posted() ) && tamed() ) && !crying()
+						&& !( ( queen() || posted() ) && isTamed() ) && !crying()
 						&& !angry() && stack != null
 						&& acceptableFoods(stack.getItem())
 						&& stack.stackSize > 0) {
@@ -2464,7 +2479,7 @@ public class EntityFairy extends EntityAnimal {
 						setHearts(!hearts());
 						return true;
 					}
-				} else if (!tamed()) {
+				} else if (!isTamed()) {
 					setHearts(!hearts());
 				}
 
@@ -2480,7 +2495,7 @@ public class EntityFairy extends EntityAnimal {
 	public boolean acceptableFoods(Item i) {
 		if (i == Items.speckled_melon) {
 			return true;
-		} else if (tamed() || !queen()) {
+		} else if (isTamed() || !queen()) {
 			return i == Items.apple || i == Items.melon || i == Items.sugar
 					|| i == Items.cake || i == Items.cookie;
 		}
@@ -2674,7 +2689,7 @@ public class EntityFairy extends EntityAnimal {
 				queen.entityFear = null;
 				// }
 			}
-		} else if (tamed() && ruler != null
+		} else if (isTamed() && ruler != null
 				&& ruler instanceof EntityPlayerMP) {
 			// EntityPlayerMP player = (EntityPlayerMP)ruler;
 			String f = getActualName(getNamePrefix(), getNameSuffix());
@@ -2766,7 +2781,7 @@ public class EntityFairy extends EntityAnimal {
 
 	@Override
 	protected void attackEntity(Entity entity, float f) {
-		if (attackTime <= 0 && f < ( tamed() ? 2.5F : 2.0F )
+		if (attackTime <= 0 && f < ( isTamed() ? 2.5F : 2.0F )
 				&& ( ( entity.boundingBox.maxY > boundingBox.minY
 						&& entity.boundingBox.minY < boundingBox.maxY )
 						|| f == 0F )) {
@@ -2820,7 +2835,7 @@ public class EntityFairy extends EntityAnimal {
 			}
 		}
 
-		if (tamed() && !rulerName().equals("") && entity != null) {
+		if (isTamed() && !rulerName().equals("") && entity != null) {
 			if (entity instanceof EntityPlayer
 					&& isRuler((EntityPlayer)entity)) {
 				if (!ignoreTarget && snowballFight(damagesource)) {
@@ -2895,7 +2910,7 @@ public class EntityFairy extends EntityAnimal {
 				FairyFactions.proxy.sendFairyMount(this, ridingEntity);
 			}
 
-			if (queen() && !tamed()) {
+			if (queen() && !isTamed()) {
 				alertFollowers(entity);
 			} else {
 				alertRuler(entity);
@@ -2983,7 +2998,7 @@ public class EntityFairy extends EntityAnimal {
 			} else {
 				s += Loc.TAME_FAIL_HAS_QUEEN;
 			}
-		} else if (tamed() && queen()) {
+		} else if (isTamed() && queen()) {
 			s += Loc.TAME_FAIL_TAME_QUEEN;
 		} else if (posted()) {
 			s += Loc.TAME_FAIL_POSTED;
