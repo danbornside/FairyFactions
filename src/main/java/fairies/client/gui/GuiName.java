@@ -2,6 +2,8 @@ package fairies.client.gui;
 
 import org.lwjgl.input.Keyboard;
 
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 import fairies.FairyFactions;
 import fairies.entity.EntityFairy;
 import net.minecraft.client.gui.GuiButton;
@@ -17,6 +19,8 @@ public class GuiName extends GuiScreen
 
     public GuiName(EntityFairy entityfairy)
     {
+		FairyFactions.LOGGER.info("GuiName: constructed");
+
         screenTitle = "Enter custom name or leave blank for default:";
         fairy = entityfairy;
         nameText = "";
@@ -27,6 +31,7 @@ public class GuiName extends GuiScreen
         }
     }
 
+    @Override
     public void initGui()
     {
         buttonList.clear();
@@ -34,16 +39,19 @@ public class GuiName extends GuiScreen
         buttonList.add(new GuiButton(0, width / 2 - 100, height / 4 + 120, "Done"));
     }
 
+    @Override
     public void onGuiClosed()
     {
         Keyboard.enableRepeatEvents(false);
 
         if (fairy != null)
         {
+    		FairyFactions.LOGGER.info("GuiName.onGuiClosed: isRemote = "+fairy.worldObj.isRemote);
+
             if (fairy.worldObj.isRemote)
             {
-                String s1 = "setfryname " + fairy.getEntityId() + " " + nameText;
-                FairyFactions.proxy.sendFairyRename(s1);
+                //String s1 = "setfryname " + fairy.getEntityId() + " " + nameText;
+                FairyFactions.proxy.sendFairyRename(fairy, nameText);
             }
             else
             {
@@ -52,6 +60,7 @@ public class GuiName extends GuiScreen
         }
     }
 
+    @Override
     public void updateScreen()
     {
         updateCounter++;
@@ -62,6 +71,7 @@ public class GuiName extends GuiScreen
         }
     }
 
+    @Override
     protected void actionPerformed(GuiButton guibutton)
     {
         if (!guibutton.enabled)
@@ -75,6 +85,7 @@ public class GuiName extends GuiScreen
         }
     }
 
+    @Override
     protected void keyTyped(char c, int i)
     {
         if (i == 28)
@@ -93,6 +104,7 @@ public class GuiName extends GuiScreen
         }
     }
 
+    @Override
     public void drawScreen(int i, int j, float f)
     {
         drawDefaultBackground();
