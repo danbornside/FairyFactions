@@ -98,7 +98,7 @@ public class EntityFairy extends EntityTameable {
 
 		this.getNavigator().setAvoidsWater(true);
 		this.tasks.addTask(1, new EntityAISwimming(this));
-		this.tasks.addTask(2, this.aiSit);
+		//this.tasks.addTask(2, this.aiSit);
 		// this.tasks.addTask(3, new EntityAILeapAtTarget(this, 0.4F));
 		this.tasks.addTask(4, new EntityAIAttackOnCollide(this, 1.0D, true));
 		this.tasks.addTask(5, new EntityAIFollowOwner(this, 1.0D, 10.0F, 2.0F));
@@ -107,8 +107,8 @@ public class EntityFairy extends EntityTameable {
 		//this.tasks.addTask(8, new EntityAIBeg(this, 8.0F));
 		this.tasks.addTask(9, new EntityAIWatchClosest(this, EntityPlayer.class, 8.0F));
 		this.tasks.addTask(9, new EntityAILookIdle(this));
-		this.targetTasks.addTask(1, new EntityAIOwnerHurtByTarget(this));
-		this.targetTasks.addTask(2, new EntityAIOwnerHurtTarget(this));
+		//this.targetTasks.addTask(1, new EntityAIOwnerHurtByTarget(this));
+		//this.targetTasks.addTask(2, new EntityAIOwnerHurtTarget(this));
 		this.targetTasks.addTask(3, new EntityAIHurtByTarget(this, true));
 		// this.targetTasks.addTask(4, new EntityAITargetNonTamed(this, EntitySheep.class, 200, false));
 
@@ -573,8 +573,10 @@ public class EntityFairy extends EntityTameable {
 	public static final float	PATH_AWAY			= (float) Math.PI;
 
 	@Override
-	public void updateAITasks() {
-		super.updateAITasks();
+	public void updateEntityActionState() {
+		super.updateEntityActionState();
+		if (wasFishing == wasFishing)
+			return;
 		
 		// _dump_();
 
@@ -2781,6 +2783,7 @@ public class EntityFairy extends EntityTameable {
 
 	@Override
 	protected void attackEntity(Entity entity, float f) {
+		FairyFactions.LOGGER.warn("fairy grrrr!!!!");
 		if (attackTime <= 0 && f < ( isTamed() ? 2.5F : 2.0F )
 				&& ( ( entity.boundingBox.maxY > boundingBox.minY
 						&& entity.boundingBox.minY < boundingBox.maxY )
@@ -2918,6 +2921,10 @@ public class EntityFairy extends EntityTameable {
 		}
 
 		return flag;
+	}
+
+	@Override public boolean attackEntityAsMob(Entity entity) {
+		return smackThatAss(entity);
 	}
 
 	// TODO: rename childish method
